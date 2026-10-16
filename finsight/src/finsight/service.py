@@ -9,9 +9,12 @@ import time
 from collections import defaultdict, deque
 
 from finsight.agent import FinancialCopilot, SessionStore
+from finsight.corpus import load_corpus
+from finsight.llm import load_config
 from finsight.retrieval import HybridRetriever
 from finsight.schemas import CopilotResponse
 from finsight.tools import ToolRegistry
+from finsight.tracing import tracer
 
 
 class RateLimiter:
@@ -78,15 +81,31 @@ class CopilotService:
         self.cache = ResponseCache()
         self.limiter = RateLimiter(int(os.getenv("FINSIGHT_RATE_LIMIT", "30")))
         self.traces = TraceStore()
+        passages = load_corpus()
+        self.stats = {
+            "passages": len(passages),
+            "companies": sorted({item.company for item in passages if item.document_id != "POISON-001"}),
+            "model_configured": load_config().enabled,
+            "model": self.copilot.model_name or "local-policy-fallback",
+        }
 
     def ask(self, question: str, session_id: str, client_key: str) -> CopilotResponse:
         if not self.limiter.allow(client_key):
             raise PermissionError("Rate limit exceeded. Wait one minute and try again.")
+        span = tracer.start("copilot.ask", {"session_id": session_id, "model": self.copilot.model_name})
         cache_key = hashlib.sha256(f"{session_id}\n{question}".encode()).hexdigest()
         cached = self.cache.get(cache_key)
         if cached:
+            tracer.event(span, "cache_hit")
+            tracer.end(span, "ok")
             return cached
-        response = self.copilot.answer(question, session_id)
+        try:
+            response = self.copilot.answer(question, session_id)
+        except Exception:
+            tracer.end(span, "error")
+            raise
+        tracer.event(span, "tools", {"count": len(response.tool_calls), "behavior": response.behavior})
+        tracer.end(span, "ok")
         self.cache.put(cache_key, response)
         self.traces.add(response, question)
         return response

@@ -24,6 +24,8 @@ def tokenize(text: str) -> list[str]:
 def chunk_passage(passage: Passage, strategy: str) -> list[str]:
     """Chunk text with one of the two experiment strategies."""
     if strategy == "section":
+        if len(passage.text) <= 700:
+            return [passage.text]
         parts = [part.strip() for part in SECTION_BOUNDARY.split(passage.text) if part.strip()]
         return parts or [passage.text]
     words = passage.text.split()
@@ -43,6 +45,7 @@ class Chunk:
     passage: Passage
     text: str
     dense: dict[str, float]
+    tokens: list[str]
 
 
 class HybridRetriever:
@@ -61,7 +64,13 @@ class HybridRetriever:
         chunks = []
         for passage in passages:
             for text in chunk_passage(passage, self.strategy):
-                chunks.append(Chunk(passage, text, self.embed(text)))
+                tokens = tokenize(text)
+                chunks.append(Chunk(passage, text, self.embed(text), tokens))
+        self._df = Counter()
+        for chunk in chunks:
+            for token in set(chunk.tokens):
+                self._df[token] += 1
+        self._average_length = sum(len(chunk.tokens) for chunk in chunks) / max(len(chunks), 1)
         return chunks
 
     @staticmethod
@@ -70,7 +79,7 @@ class HybridRetriever:
         norm = math.sqrt(sum(value * value for value in counts.values())) or 1.0
         return {key: value / norm for key, value in counts.items()}
 
-    def search(self, query: str, k: int = 5, company: Optional[str] = None, period: Optional[str] = None) -> list[Evidence]:
+    def search(self, query: str, k: int = 5, company: Optional[str] = None, period: Optional[str] = None, mode: str = "hybrid", use_priority: bool = True) -> list[Evidence]:
         candidates = self.chunks
         if company:
             candidates = [chunk for chunk in candidates if company.lower() in chunk.passage.company.lower()]
@@ -81,32 +90,37 @@ class HybridRetriever:
             expanded += " comparative income statements revenue net sales fiscal"
         query_tokens = tokenize(expanded)
         query_embed = self.embed(expanded)
-        scored = [(self._score(query_tokens, query_embed, chunk), chunk) for chunk in candidates]
+        scored = [(self._score(query_tokens, query_embed, chunk, mode, use_priority), chunk) for chunk in candidates]
         scored.sort(key=lambda item: item[0], reverse=True)
         reranked = sorted(scored[: max(k * 3, k)], key=lambda item: self._rerank(query_tokens, item[1]), reverse=True)
         return [self._evidence(score, chunk) for score, chunk in reranked[:k] if score > 0]
 
-    def _score(self, query_tokens: list[str], query_embed: dict[str, float], chunk: Chunk) -> float:
-        document_tokens = tokenize(chunk.text)
+    def _score(self, query_tokens: list[str], query_embed: dict[str, float], chunk: Chunk, mode: str = "hybrid", use_priority: bool = True) -> float:
+        document_tokens = chunk.tokens
         counts = Counter(document_tokens)
-        average = sum(len(tokenize(item.text)) for item in self.chunks) / max(len(self.chunks), 1)
+        average = self._average_length
         bm25 = 0.0
         for token in set(query_tokens):
             frequency = counts[token]
             if not frequency:
                 continue
-            document_frequency = sum(token in tokenize(item.text) for item in self.chunks)
+            document_frequency = self._df.get(token, 0)
             idf = math.log(1 + (len(self.chunks) - document_frequency + 0.5) / (document_frequency + 0.5))
             bm25 += idf * frequency * 2.2 / (frequency + 1.2 * (0.25 + 0.75 * len(document_tokens) / average))
         dense = sum(query_embed.get(token, 0.0) * chunk.dense.get(token, 0.0) for token in query_embed)
-        return bm25 + dense
+        priority = chunk.passage.priority * 12 if use_priority else 0
+        if mode == "bm25":
+            return bm25 + priority
+        if mode == "dense":
+            return dense + priority
+        return bm25 + dense + priority
 
     @staticmethod
     def _rerank(query_tokens: list[str], chunk: Chunk) -> float:
-        document = set(tokenize(chunk.text))
+        document = set(chunk.tokens)
         overlap = len(set(query_tokens) & document) / max(len(set(query_tokens)), 1)
         exact_bonus = 0.15 if any(token.isdigit() for token in query_tokens) else 0.0
-        return overlap + exact_bonus
+        return overlap + exact_bonus + chunk.passage.priority
 
     @staticmethod
     def _evidence(score: float, chunk: Chunk) -> Evidence:

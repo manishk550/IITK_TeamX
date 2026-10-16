@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 
 from finsight.schemas import ChatRequest
 from finsight.service import CopilotService
+from finsight.tracing import tracer
 
 
 app = FastAPI(title="FinSight Financial Report Copilot", version="1.0.0")
@@ -22,7 +23,17 @@ def home() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "model": service.copilot.model_name}
+    return {"status": "ok", "model": service.copilot.model_name, **service.stats}
+
+
+@app.get("/api/stats")
+def stats() -> dict:
+    return service.stats
+
+
+@app.get("/traces")
+def traces_page() -> FileResponse:
+    return FileResponse(Path(__file__).with_name("static") / "traces.html")
 
 
 @app.post("/api/ask")
@@ -37,4 +48,5 @@ def ask(body: ChatRequest, request: Request) -> dict:
 
 @app.get("/api/traces")
 def traces() -> dict:
-    return {"traces": service.traces.all()}
+    durable = list(reversed(tracer.recent(100)))
+    return {"traces": service.traces.all(), "spans": durable}

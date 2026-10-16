@@ -1,0 +1,16 @@
+{
+  "model_configured": false,
+  "model": null,
+  "strategies": [
+    "structured_few_shot",
+    "self_consistency",
+    "decomposition"
+  ],
+  "prompt_messages": {
+    "structured_few_shot": 4,
+    "self_consistency": 3,
+    "decomposition": 2
+  },
+  "scores": null,
+  "note": "Blocked: set FINSIGHT_BASE_URL, FINSIGHT_API_KEY, and FINSIGHT_MODEL, then rerun this script. Prompt strategies are implemented and checked, but scores are not invented."
+}

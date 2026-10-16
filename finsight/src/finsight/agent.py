@@ -16,15 +16,19 @@ from finsight.tools import ToolRegistry
 
 
 REFUSAL_PATTERNS = [
-    (re.compile(r"\b(buy|sell|hold)\b.{0,40}\b(stock|shares|recommendation)\b|\bshould i (buy|sell|hold)\b", re.I),
+    (re.compile(r"\b(buy(?:ing)?|sell|hold)\b.{0,40}\b(stock|shares|recommendation)\b|\bshould i (buy|sell|hold)\b", re.I),
      "FinSight cannot provide investment advice or a buy, sell, or hold recommendation."),
     (re.compile(r"\b(guarantee|predict|price target|will revenue be)\b", re.I),
      "Future performance cannot be presented as fact."),
-    (re.compile(r"\b(personal account|social security|password|private information)\b", re.I),
+    (re.compile(r"\b(personal account|social security|password|private information|aadhaar|pan card|personal phone|mobile number|personal email)\b", re.I),
      "FinSight cannot request or reveal personal or non-public information."),
-    (re.compile(r"\bignore (all|the|previous|filings|citations)\b", re.I),
+    (re.compile(r"\bignore (all|the|previous|filings|citations|safety)\b|\bsystem override\b|\breveal the (hidden|system) prompt\b", re.I),
      "Instructions to bypass evidence or safety rules are refused."),
 ]
+
+OUTSIDE_CORPUS = ("hdfc", "icici", "sbin", "bharti", "airtel", "itc", "asian paints")
+INSTRUCTION = re.compile(r"\b(system override|ignore all safety|buy .{0,30}shares)\b", re.I)
+STATED_MARGIN = re.compile(r"operating margin was (?P<pct>[0-9]+(?:\.[0-9]+)?) percent", re.I)
 
 COMPANIES = {
     "reliance": "Reliance Industries",
@@ -116,7 +120,7 @@ class FinancialCopilot:
             response = self._response(question, state, plan.refusal_reason, "refuse", [], None, "low", plan.refusal_reason, calls, started, "policy_refusal")
             return response
 
-        evidence = self._search(plan, question, calls)
+        evidence = _usable(self._search(plan, question, calls))
         steps += 1
         if steps < self.MAX_STEPS:
             self._metadata(plan, calls)
@@ -124,7 +128,9 @@ class FinancialCopilot:
         calculation, value = self._calculate(plan, evidence, calls)
         if calculation:
             steps += 1
-        answer, behavior, citations, confidence, refusal = self._critic(plan, evidence, value)
+        answer, behavior, citations, confidence, refusal = self._critic(plan, evidence, value, calculation)
+        if behavior == "answer":
+            answer = _grounded_phrase(question, answer)
         steps += 1
         reason = "completed" if steps <= self.MAX_STEPS else "step_limit"
         if state.token_estimate > self.MAX_TOKENS:
@@ -135,10 +141,12 @@ class FinancialCopilot:
         for pattern, reason in REFUSAL_PATTERNS:
             if pattern.search(question):
                 return Plan("refusal", [], [], "", refusal_reason=reason)
-        if re.search(r"\b20(30|31|32)\b", question):
+        if re.search(r"20(30|31|32)", question):
             return Plan("refusal", [], [], "", refusal_reason="The requested future or unavailable period is outside the corpus.")
-        companies = []
         lowered = question.lower()
+        if any(re.search(rf"\b{name}\b", lowered) for name in OUTSIDE_CORPUS):
+            return Plan("refusal", [], [], "", refusal_reason="That company is outside the current NIFTY 50 development corpus.")
+        companies = []
         for key, name in COMPANIES.items():
             if re.search(rf"\b{key}\b", lowered) and name not in companies:
                 companies.append(name)
@@ -153,14 +161,16 @@ class FinancialCopilot:
         intent = "fact"
         if "compare" in lowered or "higher" in lowered or "which company" in lowered:
             intent = "comparison"
-        elif "margin" in lowered or "growth" in lowered:
+        elif len(companies) >= 2 and " and " in lowered:
+            intent = "multi_document"
+        elif "margin" in lowered or "growth" in lowered or "by what percent" in lowered:
             intent = "calculation"
         elif "trend" in lowered or "every year" in lowered:
             intent = "trend"
         elif "risk" in lowered or "accounting" in lowered or "which source" in lowered:
             intent = "qualitative"
         formula = None
-        if "growth" in lowered:
+        if "growth" in lowered or "by what percent" in lowered:
             formula = "(current - prior) / prior * 100"
         elif "gross margin" in lowered:
             formula = "(revenue - cost_of_revenue) / revenue * 100"
@@ -172,8 +182,7 @@ class FinancialCopilot:
         evidence: list[dict] = []
         targets = plan.companies or [None]
         for company in targets:
-            period = None if plan.formula == "(current - prior) / prior * 100" else (plan.periods[0] if len(plan.periods) == 1 else None)
-            arguments = {"query": question, "company": company, "period": period}
+            arguments = {"query": question, "company": company, "period": None}
             result = self._call_with_retry("report_search", arguments, calls)
             evidence.extend(result.get("evidence", []))
         return evidence
@@ -187,6 +196,16 @@ class FinancialCopilot:
             return None, None
         observations = _observations(evidence)
         try:
+            if plan.formula == "(current - prior) / prior * 100" and plan.intent == "comparison" and len(plan.companies) >= 2:
+                current_year, prior_year = _growth_years(plan)
+                results = {}
+                for company in plan.companies:
+                    current = _metric(observations, company, current_year, "revenue")
+                    prior = _metric(observations, company, prior_year, "revenue")
+                    expression = f"({current} - {prior}) / {prior} * 100"
+                    result = self._call_with_retry("financial_calculator", {"expression": expression}, calls)
+                    results[company] = result.get("value")
+                return "(current - prior) / prior * 100", results
             if plan.formula == "(current - prior) / prior * 100":
                 current_year, prior_year = _growth_years(plan)
                 current = _metric(observations, plan.companies[0], current_year, "revenue")
@@ -215,12 +234,18 @@ class FinancialCopilot:
             result = self._call_with_retry("financial_calculator", {"expression": expression}, calls)
             return expression, result.get("value")
         except (KeyError, IndexError, ZeroDivisionError):
+            if plan.metric == "operating margin" and plan.companies:
+                stated = _stated_margin(evidence, plan.companies[0])
+                if stated is not None:
+                    return "reported_operating_margin", stated
             return None, None
 
-    def _critic(self, plan: Plan, evidence: list[dict], value: Union[float, dict, None]) -> tuple[str, str, list[Citation], str, Optional[str]]:
+    def _critic(self, plan: Plan, evidence: list[dict], value: Union[float, dict, None], calculation: Optional[str]) -> tuple[str, str, list[Citation], str, Optional[str]]:
         citations = _citations(evidence)
         if not citations:
             return ("The corpus does not contain enough evidence to answer this question.", "refuse", [], "low", "No supporting filing evidence was retrieved.")
+        if calculation == "reported_operating_margin" and isinstance(value, float):
+            return (f"The reported operating margin is {value:.1f}%.", "answer", citations, "high", None)
         if plan.intent == "calculation":
             if not isinstance(value, float):
                 return ("A required input is missing, so the calculation cannot be completed.", "refuse", citations, "low", "Missing calculation input.")
@@ -229,11 +254,22 @@ class FinancialCopilot:
             ranked = sorted((item for item in value.items() if isinstance(item[1], float)), key=lambda item: item[1], reverse=True)
             if not ranked:
                 return ("The comparison could not be completed from the retrieved evidence.", "refuse", citations, "low", "Missing comparison input.")
+            label = "revenue growth" if plan.formula and "current - prior" in plan.formula else "operating margin"
             details = ", ".join(f"{company}: {margin:.1f}%" for company, margin in ranked)
-            return (f"{ranked[0][0]} has the higher operating margin. {details}.", "answer", citations, "high", None)
+            return (f"{ranked[0][0]} has the higher {label}. {details}.", "answer", citations, "high", None)
         if plan.intent == "trend":
             return (_trend_answer(plan, evidence), "answer", citations[:3], "high", None)
-        if plan.intent in {"qualitative", "fact"}:
+        if plan.intent == "multi_document":
+            excerpts = []
+            for company in plan.companies:
+                rows = [item for item in evidence if item["company"] == company]
+                metric_hits = [item for item in rows if plan.metric and plan.metric in item["excerpt"].lower()]
+                match = (metric_hits or rows or [None])[0]
+                if match:
+                    excerpts.append(match["excerpt"])
+            if excerpts:
+                return (" ".join(excerpts), "answer", citations[:4], "high", None)
+        if plan.intent in {"qualitative", "fact", "multi_document"}:
             return (evidence[0]["excerpt"], "answer", citations[:3], "high", None)
         return (evidence[0]["excerpt"], "answer", citations[:3], "medium", None)
 
@@ -271,6 +307,41 @@ class FinancialCopilot:
             token_estimate=tokens,
             termination_reason=reason,
         )
+
+
+def _grounded_phrase(question: str, answer: str) -> str:
+    """Ask the hosted model to phrase a completed answer, then reject new numbers."""
+    try:
+        from finsight.llm import chat, load_config
+        if not load_config().enabled:
+            return answer
+        raw = chat([
+            {"role": "system", "content": "Rewrite the answer in one sentence. Do not add numbers or advice. Return JSON with an answer field."},
+            {"role": "user", "content": answer},
+        ])
+        import json
+        candidate = str(json.loads(raw["content"]).get("answer") or "")
+        allowed = set(re.findall(r"\d[\d,]*(?:\.\d+)?", answer))
+        introduced = set(re.findall(r"\d[\d,]*(?:\.\d+)?", candidate)) - allowed
+        if candidate and not introduced:
+            return candidate
+    except Exception:
+        return answer
+    return answer
+
+
+def _usable(evidence: list[dict]) -> list[dict]:
+    return [item for item in evidence if not INSTRUCTION.search(item.get("excerpt", ""))]
+
+
+def _stated_margin(evidence: list[dict], company: str) -> Optional[float]:
+    for item in evidence:
+        if item.get("company") != company:
+            continue
+        match = STATED_MARGIN.search(item.get("excerpt", ""))
+        if match:
+            return float(match.group("pct"))
+    return None
 
 
 def _observations(evidence: list[dict]) -> list[dict]:

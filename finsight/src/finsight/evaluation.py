@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -28,6 +29,15 @@ def classify_failure(expected: dict, response) -> str | None:
         return "citation_error"
     if response.tool_calls and all(call.status == "error" for call in response.tool_calls):
         return "tool_call_error"
+    required = expected.get("must_contain") or []
+    haystack = f"{response.answer}\n{response.calculation or ''}"
+    missing = [token for token in required if token not in haystack]
+    if missing:
+        answer_numbers = set(re.findall(r"\d[\d,]*(?:\.\d+)?", response.answer))
+        expected_numbers = set(re.findall(r"\d[\d,]*(?:\.\d+)?", " ".join(required)))
+        if answer_numbers and expected_numbers and answer_numbers.isdisjoint(expected_numbers):
+            return "hallucination"
+        return "reasoning_error"
     return None
 
 

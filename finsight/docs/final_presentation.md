@@ -19,7 +19,7 @@ Analysts need auditable answers from long filings. Small models lose context, co
 
 ## Slide 4 — Week 1 gate
 
-Show the specification, 20-question seed set, annotation guide, and three baseline strategies. Explain why the test set is frozen first.
+Show the specification, the frozen 82-question set and its checksum, and the three baseline strategies. Say clearly that hosted-model scores are not filled in until the course endpoint is configured.
 
 ## Slide 5 — Architecture
 
@@ -29,7 +29,7 @@ Tools: `report_search`, `filing_metadata`, `financial_calculator`
 
 ## Slide 6 — Retrieval experiments
 
-Compare fixed chunks, section chunks, BM25, dense retrieval, hybrid fusion, and reranking. Report recall separately from answer accuracy.
+Compare fixed chunks, section chunks, BM25, dense retrieval, and hybrid. On 40 lexical page probes, section dense recall@5 was 0.925 and the other five runs were 0.950. Recall@10 was 1.000 except section dense at 0.975.
 
 ## Slide 7 — Controlling a small model
 
@@ -37,7 +37,7 @@ Show JSON validation, retry, 10-step limit, token budget, and deterministic arit
 
 ## Slide 8 — Evaluation
 
-Show accuracy, completion, tool calls, latency, cost, and the five-class failure taxonomy.
+Local policy on the frozen 82 questions: 82 correct, 2.88 tool calls on average, 17.05 ms median latency. This is not a hosted-8B score. Cost stays unreported until the endpoint is called. The taxonomy is retrieval miss, reasoning error, tool-call error, hallucination, and policy error.
 
 ## Slide 9 — Live demo
 
@@ -57,4 +57,4 @@ Highlight the measured gain from baseline to RAG to agent. State what failed and
 
 ## Slide 12 — Close
 
-Show repository, trace dashboard, container, and the next step: expand to 500–2,000 NSE/BSE filings or annual-report sections and 60–100 adjudicated questions.
+Show the repository, the `/traces` dashboard, and the container. The corpus is already 1,284 passages and the eval set is 82 questions. The remaining step is to connect the course endpoint and rerun the three prompting strategies.

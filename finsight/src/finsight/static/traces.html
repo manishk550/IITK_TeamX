@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinSight traces</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f4f7fb; color: #142033; }
+    header { background: #0e2744; color: white; padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; }
+    a { color: #d7e6ff; }
+    main { padding: 24px 28px 48px; }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e6edf5; font-size: 14px; vertical-align: top; }
+    th { background: #eef3f9; }
+    .ok { color: #0b7a43; } .error { color: #a12626; }
+    pre { white-space: pre-wrap; margin: 0; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <strong>FinSight trace dashboard</strong>
+      <div>OpenTelemetry-compatible spans written to data/traces/traces.jsonl</div>
+    </div>
+    <a href="/">Back to research site</a>
+  </header>
+  <main>
+    <p id="summary">Loading traces…</p>
+    <table>
+      <thead><tr><th>Trace</th><th>Status</th><th>Duration</th><th>Events</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </main>
+  <script>
+    fetch("/api/traces").then((response) => response.json()).then((payload) => {
+      const spans = payload.spans || [];
+      document.getElementById("summary").textContent = `${spans.length} persisted spans from this workspace.`;
+      const body = document.getElementById("rows");
+      spans.forEach((span) => {
+        const row = document.createElement("tr");
+        const events = (span.events || []).map((event) => `${event.name} ${JSON.stringify(event.attributes || {})}`).join("\n");
+        row.innerHTML = `<td><pre>${span.trace_id || ""}\n${span.name || ""}</pre></td><td class="${span.status === "ok" ? "ok" : "error"}">${span.status || ""}</td><td>${span.duration_ms ?? ""} ms</td><td><pre>${events}</pre></td>`;
+        body.appendChild(row);
+      });
+    });
+  </script>
+</body>
+</html>

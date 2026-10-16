@@ -1,0 +1,17 @@
+{
+  "examples": 82,
+  "correct": 82,
+  "accuracy": 1.0,
+  "task_completion_rate": 1.0,
+  "average_tool_calls": 2.88,
+  "median_latency_ms": 16.896,
+  "failure_taxonomy": {},
+  "corpus_passages": 1284,
+  "companies": [
+    "HCLTech",
+    "Infosys",
+    "Reliance Industries",
+    "Tata Consultancy Services",
+    "Wipro"
+  ]
+}

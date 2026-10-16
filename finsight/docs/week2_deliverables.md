@@ -19,7 +19,18 @@
 | BM25 only | Diagnostic baseline |
 | Hybrid plus reranking | Required production configuration |
 
-The current sample contains 10 verified passages across five NIFTY 50 companies. For submission against the course gate, load 500–2,000 real NSE/BSE filings or annual-report sections through the same `Passage` format. Retrieval recall should then be calculated against gold evidence locations in the frozen evaluation set.
+The loaded corpus contains 1,284 passages, including 1,273 pages extracted from official Reliance, TCS, Infosys, and Wipro FY2024 PDFs. Recall on 40 lexical page probes, measured separately from answer quality:
+
+| Chunking | Ranker | Recall@5 | Recall@10 |
+|---|---|---|---|
+| Section | BM25 | 0.950 | 1.000 |
+| Section | Dense hash | 0.925 | 0.975 |
+| Section | Hybrid | 0.950 | 1.000 |
+| Fixed 40/10 | BM25 | 0.950 | 1.000 |
+| Fixed 40/10 | Dense hash | 0.950 | 1.000 |
+| Fixed 40/10 | Hybrid | 0.950 | 1.000 |
+
+Source: `reports/retrieval_ablation.json`. These probes reuse words from the target page, so the comparison across rankers matters more than the absolute recall.
 
 ## Required measurements
 
