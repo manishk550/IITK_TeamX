@@ -23,9 +23,9 @@ class LLMConfig:
 
 def load_config() -> LLMConfig:
     return LLMConfig(
-        base_url=os.getenv("FINSIGHT_BASE_URL", "").rstrip("/"),
+        base_url=os.getenv("FINSIGHT_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/"),
         api_key=os.getenv("FINSIGHT_API_KEY", ""),
-        model=os.getenv("FINSIGHT_MODEL", ""),
+        model=os.getenv("FINSIGHT_MODEL", "meta-llama/llama-3.1-8b-instruct"),
         embedding_model=os.getenv("FINSIGHT_EMBEDDING_MODEL", ""),
     )
 
