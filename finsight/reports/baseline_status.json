@@ -1,0 +1,5 @@
+{
+  "model_configured": false,
+  "scores": null,
+  "note": "Add the course values to finsight/.env: FINSIGHT_BASE_URL, FINSIGHT_API_KEY, and FINSIGHT_MODEL. Then rerun this script."
+}

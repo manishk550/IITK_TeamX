@@ -1,0 +1,164 @@
+{
+  "model": "liquid/lfm-2.5-2.6b:free",
+  "provider": "OpenRouter free tier",
+  "examples_completed": 51,
+  "examples_in_frozen_set": 82,
+  "stopped_reason": "Free-tier daily limit. Resets 05:30 IST on 4 November 2026. Resume with scripts/run_baseline.py.",
+  "evidence_in_prompt": false,
+  "model_cost_per_query_usd": 0.0,
+  "temperature": {
+    "structured_few_shot": 0.0,
+    "self_consistency": 0.7,
+    "decomposition": 0.0
+  },
+  "strategies": [
+    {
+      "strategy": "structured_few_shot",
+      "examples": 51,
+      "correct": 0,
+      "accuracy": 0.0,
+      "schema_valid_rate": 1.0,
+      "citation_rate": 0.216,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 1948.6,
+      "p95_latency_ms": 8776.1,
+      "prompt_tokens": 16920,
+      "completion_tokens": 12603,
+      "failure_taxonomy": {
+        "refusal_error": 40,
+        "reasoning_error": 10,
+        "hallucination": 1
+      },
+      "annotated_failures": [
+        {
+          "id": "NIFTY-001",
+          "failure": "refusal_error",
+          "question": "What was Reliance Industries revenue for fiscal 2024?",
+          "answer": "I don't have specific information about Reliance Industries revenue for fiscal 2024 in my available evidence."
+        },
+        {
+          "id": "NIFTY-002",
+          "failure": "refusal_error",
+          "question": "What was Reliance Industries revenue for fiscal 2023?",
+          "answer": "I don't have information about Reliance Industries revenue for fiscal 2023 in the provided evidence."
+        },
+        {
+          "id": "NIFTY-003",
+          "failure": "reasoning_error",
+          "question": "What was Reliance gross revenue for fiscal 2024?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-004",
+          "failure": "refusal_error",
+          "question": "What was Reliance gross revenue for fiscal 2023?",
+          "answer": "I don't have specific information about Reliance's gross revenue for fiscal 2023 in the provided evidence."
+        },
+        {
+          "id": "NIFTY-005",
+          "failure": "refusal_error",
+          "question": "What was TCS revenue for fiscal 2024?",
+          "answer": "I don't have specific information about TCS revenue for fiscal 2024 in my available context."
+        }
+      ]
+    },
+    {
+      "strategy": "self_consistency",
+      "examples": 51,
+      "correct": 0,
+      "accuracy": 0.0,
+      "schema_valid_rate": 1.0,
+      "citation_rate": 0.02,
+      "agreement_rate": 0.157,
+      "median_latency_ms": 4723.8,
+      "p95_latency_ms": 36996.4,
+      "prompt_tokens": 16029,
+      "completion_tokens": 29224,
+      "failure_taxonomy": {
+        "reasoning_error": 42,
+        "refusal_error": 4,
+        "hallucination": 5
+      },
+      "annotated_failures": [
+        {
+          "id": "NIFTY-001",
+          "failure": "reasoning_error",
+          "question": "What was Reliance Industries revenue for fiscal 2024?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-002",
+          "failure": "reasoning_error",
+          "question": "What was Reliance Industries revenue for fiscal 2023?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-003",
+          "failure": "reasoning_error",
+          "question": "What was Reliance gross revenue for fiscal 2024?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-004",
+          "failure": "reasoning_error",
+          "question": "What was Reliance gross revenue for fiscal 2023?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-005",
+          "failure": "reasoning_error",
+          "question": "What was TCS revenue for fiscal 2024?",
+          "answer": ""
+        }
+      ]
+    },
+    {
+      "strategy": "decomposition",
+      "examples": 51,
+      "correct": 0,
+      "accuracy": 0.0,
+      "schema_valid_rate": 1.0,
+      "citation_rate": 0.0,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 2308.7,
+      "p95_latency_ms": 24771.0,
+      "prompt_tokens": 9485,
+      "completion_tokens": 10697,
+      "failure_taxonomy": {
+        "reasoning_error": 51
+      },
+      "annotated_failures": [
+        {
+          "id": "NIFTY-001",
+          "failure": "reasoning_error",
+          "question": "What was Reliance Industries revenue for fiscal 2024?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-002",
+          "failure": "reasoning_error",
+          "question": "What was Reliance Industries revenue for fiscal 2023?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-003",
+          "failure": "reasoning_error",
+          "question": "What was Reliance gross revenue for fiscal 2024?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-004",
+          "failure": "reasoning_error",
+          "question": "What was Reliance gross revenue for fiscal 2023?",
+          "answer": ""
+        },
+        {
+          "id": "NIFTY-005",
+          "failure": "reasoning_error",
+          "question": "What was TCS revenue for fiscal 2024?",
+          "answer": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "examples": 82,
+  "correct": 82,
+  "accuracy": 1.0,
+  "task_completion_rate": 1.0,
+  "average_tool_calls": 2.88,
+  "median_latency_ms": 19.535,
+  "p95_latency_ms": 38.531,
+  "model_cost_per_query_usd": 0.0,
+  "failure_taxonomy": {},
+  "corpus_passages": 1314
+}
