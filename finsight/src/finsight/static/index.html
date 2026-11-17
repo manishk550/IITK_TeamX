@@ -593,11 +593,11 @@
       course: {model: "Qwen/Qwen3-8B", status: "● Course API · Qwen3-8B", hint: "Uses the group API key to phrase the checked FastAPI answer."},
       local: {model: "FastAPI local agent", status: "● FastAPI · local agent", hint: "Original FastAPI agent. It answers from the filings and does not call the course model."}
     };
-    let provider = localStorage.getItem("finsight-provider") === "course" ? "course" : "local";
+    let provider = localStorage.getItem("finsight-provider") === "local" ? "local" : "course";
 
-    function applyProvider(name) {
-      provider = modes[name] ? name : "local";
-      localStorage.setItem("finsight-provider", provider);
+    function applyProvider(name, remember = false) {
+      provider = modes[name] ? name : "course";
+      if (remember) localStorage.setItem("finsight-provider", provider);
       document.querySelectorAll("#mode-toggle button").forEach((button) => {
         button.classList.toggle("active", button.dataset.provider === provider);
       });
@@ -729,7 +729,7 @@
     document.getElementById("mode-toggle").addEventListener("click", (event) => {
       const button = event.target.closest("button");
       if (!button) return;
-      applyProvider(button.dataset.provider);
+      applyProvider(button.dataset.provider, true);
       fetch("/api/provider", {
         method: "POST",
         headers: {"Content-Type": "application/json"},

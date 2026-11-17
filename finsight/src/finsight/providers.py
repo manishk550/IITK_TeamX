@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import contextvars
+import os
 import threading
 
 PROVIDERS = ("local", "course")
 
-_saved = "local"
+
+
+def _default_provider() -> str:
+    """Startup provider: Qwen3-8B via the course key unless FINSIGHT_DEFAULT_PROVIDER=local."""
+    name = os.getenv("FINSIGHT_DEFAULT_PROVIDER", "course").strip().lower()
+    return name if name in PROVIDERS else "course"
+
+
+_saved = _default_provider()
 _lock = threading.Lock()
-_active = contextvars.ContextVar("finsight_provider", default="local")
+_active = contextvars.ContextVar("finsight_provider", default=_saved)
 
 
 def saved_provider() -> str:
@@ -33,7 +42,7 @@ def current_provider() -> str:
 def activate(name: str | None):
     chosen = name or saved_provider()
     if chosen not in PROVIDERS:
-        chosen = "local"
+        chosen = "course"
     return _active.set(chosen)
 
 

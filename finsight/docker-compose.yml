@@ -3,13 +3,18 @@ services:
     build: .
     ports:
       - "8000:8000"
+    # FINSIGHT_API_KEY comes from .env (copy .env.example). It is injected at runtime, never baked into the image.
+    env_file:
+      - .env
     environment:
       FINSIGHT_BASE_URL: https://103.42.50.41:1034/v1
       FINSIGHT_MODEL: Qwen/Qwen3-8B
       FINSIGHT_CA_CERT: /app/certs/vm04-ca.crt
+      FINSIGHT_DEFAULT_PROVIDER: ${FINSIGHT_DEFAULT_PROVIDER:-course}
       FINSIGHT_MAX_TOKENS: "1024"
       FINSIGHT_RATE_LIMIT: 30
       FINSIGHT_CHUNKING: section
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 30s

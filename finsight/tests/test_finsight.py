@@ -158,3 +158,14 @@ def test_provider_toggle_uses_the_course_key_only_when_selected(monkeypatch):
     assert "Phrased with the course API key." in course.json()["caveats"]
     assert course.json()["citations"]
     assert saved.json()["provider"] == "local"
+
+
+def test_default_provider_comes_from_the_environment(monkeypatch):
+    from finsight.providers import _default_provider
+
+    monkeypatch.delenv("FINSIGHT_DEFAULT_PROVIDER", raising=False)
+    assert _default_provider() == "course"
+    monkeypatch.setenv("FINSIGHT_DEFAULT_PROVIDER", "Local")
+    assert _default_provider() == "local"
+    monkeypatch.setenv("FINSIGHT_DEFAULT_PROVIDER", "openai")
+    assert _default_provider() == "course"
