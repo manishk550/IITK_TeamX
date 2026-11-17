@@ -1,0 +1,421 @@
+{
+  "model": "Qwen/Qwen3-8B",
+  "endpoint": "https://103.42.50.41:1034/v1",
+  "max_tokens": 400,
+  "results": {
+    "closed_book/zero_shot": {
+      "examples": 82,
+      "accuracy": 0.183,
+      "answer_accuracy": 0.029,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 0.988,
+      "gold_citation_rate": 0.0,
+      "hallucination_rate": 0.354,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 2316.8,
+      "p95_latency_ms": 5218.4,
+      "avg_prompt_tokens": 87.8,
+      "avg_completion_tokens": 117.0,
+      "failure_taxonomy": {
+        "hallucination": 29,
+        "refusal_error": 27,
+        "reasoning_error": 10,
+        "schema_error": 1
+      },
+      "tolerant_accuracy": 0.195
+    },
+    "closed_book/structured_few_shot": {
+      "examples": 82,
+      "accuracy": 0.171,
+      "answer_accuracy": 0.015,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 1.0,
+      "gold_citation_rate": 0.0,
+      "hallucination_rate": 0.0,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 1319.4,
+      "p95_latency_ms": 1634.2,
+      "avg_prompt_tokens": 349.8,
+      "avg_completion_tokens": 53.2,
+      "failure_taxonomy": {
+        "refusal_error": 65,
+        "reasoning_error": 3
+      },
+      "tolerant_accuracy": 0.171
+    },
+    "closed_book/self_consistency": {
+      "examples": 82,
+      "accuracy": 0.159,
+      "answer_accuracy": 0.0,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 1.0,
+      "gold_citation_rate": 0.0,
+      "hallucination_rate": 0.195,
+      "agreement_rate": 0.159,
+      "median_latency_ms": 6739.1,
+      "p95_latency_ms": 12571.0,
+      "avg_prompt_tokens": 314.4,
+      "avg_completion_tokens": 303.4,
+      "failure_taxonomy": {
+        "hallucination": 16,
+        "refusal_error": 39,
+        "reasoning_error": 14
+      },
+      "tolerant_accuracy": 0.159
+    },
+    "closed_book/decomposition": {
+      "examples": 82,
+      "accuracy": 0.159,
+      "answer_accuracy": 0.0,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 0.976,
+      "gold_citation_rate": 0.0,
+      "hallucination_rate": 0.427,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 3654.9,
+      "p95_latency_ms": 7487.6,
+      "avg_prompt_tokens": 208.0,
+      "avg_completion_tokens": 183.1,
+      "failure_taxonomy": {
+        "refusal_error": 27,
+        "hallucination": 35,
+        "reasoning_error": 5,
+        "schema_error": 2
+      },
+      "tolerant_accuracy": 0.159
+    },
+    "with_evidence/zero_shot": {
+      "examples": 82,
+      "accuracy": 0.537,
+      "answer_accuracy": 0.456,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 0.988,
+      "gold_citation_rate": 0.662,
+      "hallucination_rate": 0.146,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 2742.0,
+      "p95_latency_ms": 5391.9,
+      "avg_prompt_tokens": 506.5,
+      "avg_completion_tokens": 135.7,
+      "failure_taxonomy": {
+        "hallucination": 12,
+        "refusal_error": 22,
+        "reasoning_error": 3,
+        "schema_error": 1
+      },
+      "tolerant_accuracy": 0.61
+    },
+    "with_evidence/structured_few_shot": {
+      "examples": 82,
+      "accuracy": 0.561,
+      "answer_accuracy": 0.5,
+      "refusal_accuracy": 0.857,
+      "schema_valid_rate": 1.0,
+      "gold_citation_rate": 0.662,
+      "hallucination_rate": 0.268,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 2149.3,
+      "p95_latency_ms": 4719.2,
+      "avg_prompt_tokens": 768.5,
+      "avg_completion_tokens": 101.7,
+      "failure_taxonomy": {
+        "hallucination": 22,
+        "reasoning_error": 9,
+        "refusal_error": 5
+      },
+      "tolerant_accuracy": 0.732
+    },
+    "with_evidence/self_consistency": {
+      "examples": 82,
+      "accuracy": 0.463,
+      "answer_accuracy": 0.368,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 0.988,
+      "gold_citation_rate": 0.662,
+      "hallucination_rate": 0.171,
+      "agreement_rate": 0.451,
+      "median_latency_ms": 9307.3,
+      "p95_latency_ms": 15686.0,
+      "avg_prompt_tokens": 1564.5,
+      "avg_completion_tokens": 395.7,
+      "failure_taxonomy": {
+        "refusal_error": 27,
+        "hallucination": 14,
+        "reasoning_error": 2,
+        "schema_error": 1
+      },
+      "tolerant_accuracy": 0.561
+    },
+    "with_evidence/decomposition": {
+      "examples": 82,
+      "accuracy": 0.549,
+      "answer_accuracy": 0.471,
+      "refusal_accuracy": 0.929,
+      "schema_valid_rate": 1.0,
+      "gold_citation_rate": 0.662,
+      "hallucination_rate": 0.232,
+      "agreement_rate": 1.0,
+      "median_latency_ms": 4285.5,
+      "p95_latency_ms": 7322.9,
+      "avg_prompt_tokens": 1055.6,
+      "avg_completion_tokens": 184.9,
+      "failure_taxonomy": {
+        "refusal_error": 10,
+        "hallucination": 19,
+        "reasoning_error": 8
+      },
+      "tolerant_accuracy": 0.695
+    }
+  },
+  "agent_phrase": {
+    "examples": 82,
+    "accuracy": 0.829,
+    "median_latency_ms": 929.9,
+    "p95_latency_ms": 1810.9,
+    "rephrase_outcomes": {
+      "Phrased with the course API key.": 62,
+      "Course model changed a figure, so the FastAPI answer was kept.": 6,
+      "no rephrase (refusal path)": 14
+    },
+    "strict_accuracy": 0.829,
+    "tolerant_accuracy": 0.829,
+    "failures": [
+      {
+        "id": "NIFTY-006",
+        "type": "fact",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue increased from ₹191,754 crore in fiscal 2022 to ₹240,893 crore in fiscal 2024, with an operating margin of 24.6 percent in fiscal 2024.",
+        "must_contain": [
+          "225,458"
+        ]
+      },
+      {
+        "id": "NIFTY-009",
+        "type": "fact",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue increased from ₹121,641 crore in fiscal 2022 to ₹153,670 crore in fiscal 2024, with operating income at ₹31,747 crore in fiscal 2024.",
+        "must_contain": [
+          "146,767"
+        ]
+      },
+      {
+        "id": "NIFTY-040",
+        "type": "comparison",
+        "strict": "reasoning_error",
+        "tolerant_ok": false,
+        "answer": "HCLTech has a higher operating margin compared to Wipro.",
+        "must_contain": [
+          "HCLTech",
+          "18.2%",
+          "15.2%"
+        ]
+      },
+      {
+        "id": "NIFTY-041",
+        "type": "comparison",
+        "strict": "reasoning_error",
+        "tolerant_ok": false,
+        "answer": "Infosys has a higher operating margin compared to Wipro.",
+        "must_contain": [
+          "Infosys",
+          "20.7%",
+          "15.2%"
+        ]
+      },
+      {
+        "id": "NIFTY-047",
+        "type": "trend",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The revenue series showed an increase in each consecutive year from FY2022 to FY2024.",
+        "must_contain": [
+          "increased in each consecutive year",
+          "191,754"
+        ]
+      },
+      {
+        "id": "NIFTY-048",
+        "type": "trend",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The revenue series showed an increase in each consecutive year from FY2022 to FY2024.",
+        "must_contain": [
+          "increased in each consecutive year",
+          "121,641"
+        ]
+      },
+      {
+        "id": "NIFTY-050",
+        "type": "trend",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The revenue series showed an increase in each consecutive year from FY2022 to FY2024.",
+        "must_contain": [
+          "increased in each consecutive year",
+          "240,893"
+        ]
+      },
+      {
+        "id": "NIFTY-051",
+        "type": "trend",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The revenue series showed an increase in each consecutive year from FY2022 to FY2024.",
+        "must_contain": [
+          "increased in each consecutive year",
+          "153,670"
+        ]
+      },
+      {
+        "id": "NIFTY-053",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue and gross revenue increased in fiscal 2024 compared to fiscal 2023, with an operating margin of 24.6 percent.",
+        "must_contain": [
+          "914,472",
+          "240,893"
+        ]
+      },
+      {
+        "id": "NIFTY-054",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue and operating income increased in fiscal 2024 compared to previous years, with net income also showing growth.",
+        "must_contain": [
+          "153,670",
+          "109,913"
+        ]
+      },
+      {
+        "id": "NIFTY-055",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue and operating income increased in fiscal 2024 compared to fiscal 2023, with net income also showing growth.",
+        "must_contain": [
+          "20,027",
+          "13,609.9"
+        ]
+      },
+      {
+        "id": "NIFTY-056",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The company's revenue and operating income increased in fiscal 2024 compared to previous years.",
+        "must_contain": [
+          "191,754",
+          "121,641"
+        ]
+      },
+      {
+        "id": "NIFTY-057",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "Revenue and gross revenue increased in fiscal 2024 compared to fiscal 2023, with operating income also rising in fiscal 2024.",
+        "must_contain": [
+          "1,000,122",
+          "153,670"
+        ]
+      },
+      {
+        "id": "NIFTY-058",
+        "type": "multi_document",
+        "strict": "hallucination",
+        "tolerant_ok": false,
+        "answer": "The company's revenue and operating income increased in fiscal 2024 compared to previous years.",
+        "must_contain": [
+          "90,934.8",
+          "225,458"
+        ]
+      }
+    ]
+  },
+  "tolerant_by_type": {
+    "closed_book/zero_shot": {
+      "fact": "1/20",
+      "calculation": "0/12",
+      "ratio": "0/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "0/6",
+      "qualitative": "2/10",
+      "refusal": "13/14"
+    },
+    "closed_book/structured_few_shot": {
+      "fact": "0/20",
+      "calculation": "0/12",
+      "ratio": "0/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "0/6",
+      "qualitative": "1/10",
+      "refusal": "13/14"
+    },
+    "closed_book/self_consistency": {
+      "fact": "0/20",
+      "calculation": "0/12",
+      "ratio": "0/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "0/6",
+      "qualitative": "0/10",
+      "refusal": "13/14"
+    },
+    "closed_book/decomposition": {
+      "fact": "0/20",
+      "calculation": "0/12",
+      "ratio": "0/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "0/6",
+      "qualitative": "0/10",
+      "refusal": "13/14"
+    },
+    "with_evidence/zero_shot": {
+      "fact": "19/20",
+      "calculation": "4/12",
+      "ratio": "2/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "2/6",
+      "qualitative": "10/10",
+      "refusal": "13/14"
+    },
+    "with_evidence/structured_few_shot": {
+      "fact": "19/20",
+      "calculation": "10/12",
+      "ratio": "3/6",
+      "comparison": "1/8",
+      "trend": "0/6",
+      "multi_document": "5/6",
+      "qualitative": "10/10",
+      "refusal": "12/14"
+    },
+    "with_evidence/self_consistency": {
+      "fact": "15/20",
+      "calculation": "6/12",
+      "ratio": "1/6",
+      "comparison": "1/8",
+      "trend": "0/6",
+      "multi_document": "1/6",
+      "qualitative": "9/10",
+      "refusal": "13/14"
+    },
+    "with_evidence/decomposition": {
+      "fact": "19/20",
+      "calculation": "9/12",
+      "ratio": "3/6",
+      "comparison": "0/8",
+      "trend": "0/6",
+      "multi_document": "3/6",
+      "qualitative": "10/10",
+      "refusal": "13/14"
+    }
+  }
+}
