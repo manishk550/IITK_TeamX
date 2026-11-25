@@ -169,3 +169,40 @@ def test_default_provider_comes_from_the_environment(monkeypatch):
     assert _default_provider() == "local"
     monkeypatch.setenv("FINSIGHT_DEFAULT_PROVIDER", "openai")
     assert _default_provider() == "course"
+
+
+def test_unavailable_fiscal_year_is_refused_not_answered_with_fy2024():
+    # Regression: unrecognised years used to fall back to FY2024 figures with high confidence.
+    for question in (
+        "Calculate Infosys fiscal 2026 operating margin",
+        "Calculate Infosys fiscal 2029 operating margin",
+        "What was TCS revenue for fiscal 2025?",
+        "What was Infosys revenue in FY27?",
+        "Compare Infosys and HCLTech operating margins for fiscal 2027.",
+        "What was the reported operating margin for TCS in fiscal 2026?",
+        "Did TCS revenue increase every year from fiscal 2022 to fiscal 2026?",
+    ):
+        response = copilot().answer(question)
+        assert response.behavior == "refuse", question
+        assert response.confidence == "low", question
+        assert "unavailable" in response.answer, question
+        assert "20.7" not in response.answer and "24.6" not in response.answer, question
+
+
+def test_past_year_without_reported_figure_is_refused():
+    for question in (
+        "What was Infosys revenue for fiscal 2019?",
+        "What was Wipro revenue for fiscal 2021?",
+        "Calculate Infosys operating margin for fiscal 2019.",
+        "Compare Infosys and HCLTech operating margins for fiscal 2023.",
+    ):
+        response = copilot().answer(question)
+        assert response.behavior == "refuse", question
+        assert response.confidence == "low", question
+
+
+def test_available_fiscal_year_still_answers():
+    margin = copilot().answer("Calculate Infosys operating margin for fiscal 2024.")
+    prior = copilot().answer("What was Infosys revenue for fiscal 2023?")
+    assert margin.behavior == "answer" and "20.7" in margin.answer
+    assert prior.behavior == "answer" and "146,767" in prior.answer
