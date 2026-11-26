@@ -28,7 +28,13 @@ REFUSAL_PATTERNS = [
 
 OUTSIDE_CORPUS = ("hdfc", "itc", "asian paints")
 INSTRUCTION = re.compile(r"\b(system override|ignore all safety|buy .{0,30}shares)\b", re.I)
-STATED_MARGIN = re.compile(r"operating margin was (?P<pct>[0-9]+(?:\.[0-9]+)?) percent", re.I)
+STATED_MARGIN = re.compile(
+    r"operating margin was (?P<pct>[0-9]+(?:\.[0-9]+)?) percent(?: (?:in|for) fiscal (?P<year>20[0-9]{2}))?",
+    re.I,
+)
+# A fiscal year named in a question: "FY2026", "FY 26", "FY'27", "fiscal 2026", "fiscal year 2026", "in 2026".
+YEAR_MENTION = re.compile(r"\bFY\s*'?(?P<fy>[0-9]{4}|[0-9]{2})\b|\b(?P<year>(?:19|20)[0-9]{2})\b", re.I)
+DEFAULT_LATEST_YEAR = "2024"
 
 COMPANIES = {
     "reliance": "Reliance Industries",
@@ -68,7 +74,6 @@ COMPANIES = {
     "titan company": "Titan Company",
     "titan": "Titan Company",
 }
-PERIODS = ("FY2022", "FY2023", "FY2024", "FY2025", "FY2024 Q4")
 AMOUNT = re.compile(
     r"(?P<metric>gross revenue|operating income|income from operations|cost of revenue|net income|revenue)"
     r"(?: were| was)? [₹$]?(?P<amount>[0-9][0-9,]*(?:\.[0-9]+)?) (?:crore|million)"
@@ -150,6 +155,8 @@ class Plan:
     metric: str
     formula: Optional[str] = None
     refusal_reason: Optional[str] = None
+    # Fiscal years the user explicitly asked about; answers must be grounded in exactly these years.
+    years: list[str] = field(default_factory=list)
 
 
 class FinancialCopilot:
@@ -167,6 +174,7 @@ class FinancialCopilot:
         self.tools = tools
         self.sessions = sessions or SessionStore()
         self.model_name = model_name
+        self.latest_year = _latest_corpus_year(tools)
 
     def answer(self, question: str, session_id: str = "default") -> CopilotResponse:
         state = self.sessions.get(session_id)
@@ -191,8 +199,15 @@ class FinancialCopilot:
         for pattern, reason in REFUSAL_PATTERNS:
             if pattern.search(question):
                 return Plan("refusal", [], [], "", refusal_reason=reason)
-        if re.search(r"20(30|31|32)", question):
-            return Plan("refusal", [], [], "", refusal_reason="The requested future or unavailable period is outside the corpus.")
+        years = _requested_years(question)
+        unavailable = [year for year in years if year > self.latest_year]
+        if unavailable:
+            missing = ", ".join(f"FY{year}" for year in unavailable)
+            return Plan(
+                "refusal", [], [], "",
+                refusal_reason=f"The requested period ({missing}) is unavailable: the corpus only covers filings up to FY{self.latest_year}.",
+                years=years,
+            )
         lowered = question.lower()
         if any(re.search(rf"\b{name}\b", lowered) for name in OUTSIDE_CORPUS):
             return Plan("refusal", [], [], "", refusal_reason="That company is outside the current NIFTY 50 development corpus.")
@@ -200,10 +215,12 @@ class FinancialCopilot:
         for key, name in COMPANIES.items():
             if re.search(rf"\b{key}\b", lowered) and name not in companies:
                 companies.append(name)
-        periods = [period for period in PERIODS if period.lower() in lowered or period[-4:] in lowered]
+        periods = [f"FY{year}" for year in years]
+        if "FY2024" in periods and re.search(r"\bq4\b", lowered):
+            periods.append("FY2024 Q4")
         if "three-year" in lowered or "three most recent" in lowered:
             periods = ["FY2022", "FY2023", "FY2024", "FY2025"]
-        metric = "revenue"
+        metric = ""
         for candidate in ("operating margin", "gross margin", "operating income", "net sales", "revenue", "risk"):
             if candidate in lowered:
                 metric = candidate
@@ -226,7 +243,7 @@ class FinancialCopilot:
             formula = "(revenue - cost_of_revenue) / revenue * 100"
         elif "operating margin" in lowered:
             formula = "operating_income / revenue * 100"
-        plan = Plan(intent, companies, periods, metric, formula)
+        plan = Plan(intent, companies, periods, metric, formula, years=years)
         if turns and not plan.refusal_reason and not plan.companies:
             if re.search(r"\b(it|its|that|those|same|again|there|previous|this company)\b", question, re.I):
                 earlier = self._plan(turns[-1]["question"])
@@ -234,6 +251,7 @@ class FinancialCopilot:
                     plan.companies = earlier.companies
                 if not plan.periods and earlier.periods:
                     plan.periods = earlier.periods
+                    plan.years = earlier.years
         return plan
 
     def _search(self, plan: Plan, question: str, calls: list[ToolCallRecord]) -> list[dict]:
@@ -274,8 +292,8 @@ class FinancialCopilot:
             if plan.intent == "comparison" and "operating_income" in plan.formula:
                 margins = {}
                 for company in plan.companies:
-                    operating = _metric(observations, company, "2024", "operating")
-                    revenue = _metric(observations, company, "2024", "revenue")
+                    operating = _metric(observations, company, _target_year(plan), "operating")
+                    revenue = _metric(observations, company, _target_year(plan), "revenue")
                     expression = f"{operating} / {revenue} * 100"
                     result = self._call_with_retry("financial_calculator", {"expression": expression}, calls)
                     margins[company] = result.get("value")
@@ -293,7 +311,7 @@ class FinancialCopilot:
             return expression, result.get("value")
         except (KeyError, IndexError, ZeroDivisionError):
             if plan.metric == "operating margin" and plan.companies:
-                stated = _stated_margin(evidence, plan.companies[0])
+                stated = _stated_margin(evidence, plan.companies[0], _target_year(plan))
                 if stated is not None:
                     return "reported_operating_margin", stated
             return None, None
@@ -308,6 +326,8 @@ class FinancialCopilot:
             if not isinstance(value, float):
                 return ("A required input is missing, so the calculation cannot be completed.", "refuse", citations, "low", "Missing calculation input.")
             return (f"The calculated result is {value:.1f}%. Formula: `{plan.formula}`.", "answer", citations, "high", None)
+        if plan.intent == "comparison" and plan.formula and not isinstance(value, dict):
+            return ("A required input is missing, so the comparison cannot be completed.", "refuse", citations, "low", "Missing comparison input.")
         if plan.intent == "comparison" and isinstance(value, dict):
             ranked = sorted((item for item in value.items() if isinstance(item[1], float)), key=lambda item: item[1], reverse=True)
             if not ranked:
@@ -316,7 +336,17 @@ class FinancialCopilot:
             details = ", ".join(f"{company}: {margin:.1f}%" for company, margin in ranked)
             return (f"{ranked[0][0]} has the higher {label}. {details}.", "answer", citations, "high", None)
         if plan.intent == "trend":
+            reported = _revenue_years(plan, evidence)
+            missing = [year for year in plan.years if year not in reported]
+            if missing:
+                return _unavailable(missing)
             return (_trend_answer(plan, evidence), "answer", citations[:3], "high", None)
+        if plan.years and plan.intent in {"qualitative", "fact", "multi_document"}:
+            supported = [item for item in evidence if all(_reports_year(item, year, plan.metric) for year in plan.years)]
+            if not supported:
+                return _unavailable(plan.years)
+            evidence = supported
+            citations = _citations(evidence)
         if plan.intent == "multi_document":
             excerpts = []
             for company in plan.companies:
@@ -406,14 +436,71 @@ def _usable(evidence: list[dict]) -> list[dict]:
     return [item for item in evidence if not INSTRUCTION.search(item.get("excerpt", ""))]
 
 
-def _stated_margin(evidence: list[dict], company: str) -> Optional[float]:
+def _stated_margin(evidence: list[dict], company: str, year: str) -> Optional[float]:
+    """A reported margin, only when the filing states it for the requested fiscal year."""
     for item in evidence:
         if item.get("company") != company:
             continue
-        match = STATED_MARGIN.search(item.get("excerpt", ""))
-        if match:
-            return float(match.group("pct"))
+        for match in STATED_MARGIN.finditer(item.get("excerpt", "")):
+            stated_year = match.group("year") or _period_year(item.get("fiscal_period", ""))
+            if stated_year == year:
+                return float(match.group("pct"))
     return None
+
+
+def _requested_years(question: str) -> list[str]:
+    years = set()
+    for match in YEAR_MENTION.finditer(question):
+        fy = match.group("fy")
+        if fy:
+            years.add(fy if len(fy) == 4 else f"20{fy}")
+        else:
+            years.add(match.group("year"))
+    return sorted(years)
+
+
+def _latest_corpus_year(tools: ToolRegistry) -> str:
+    """Latest fiscal period covered by a filing in the corpus (later periods are unavailable)."""
+    chunks = getattr(getattr(tools, "retriever", None), "chunks", None) or []
+    years = [_period_year(chunk.passage.fiscal_period) for chunk in chunks]
+    return max((year for year in years if year), default=DEFAULT_LATEST_YEAR)
+
+
+def _period_year(period: str) -> Optional[str]:
+    match = re.search(r"20[0-9]{2}", period or "")
+    return match.group(0) if match else None
+
+
+def _reports_year(item: dict, year: str, metric: str) -> bool:
+    """True when a sentence of the excerpt states the metric for that fiscal year.
+
+    A bare date ("December 31, 2021") or an unrelated sentence that merely names the
+    year ("During fiscal 2019, the company delisted ...") does not count as data for it.
+    """
+    period = re.compile(rf"\b(?:fiscal(?: year)?|FY)\s*{year}\b", re.I)
+    for sentence in re.split(r"(?<=[.;])\s+", item.get("excerpt", "")):
+        if period.search(sentence) and (not metric or metric in sentence.lower()):
+            return True
+    return not metric and _period_year(item.get("fiscal_period", "")) == year
+
+
+def _revenue_years(plan: Plan, evidence: list[dict]) -> set[str]:
+    return {
+        item["year"]
+        for item in _observations(evidence)
+        if item["metric"] == "revenue" and (not plan.companies or item["company"] in plan.companies)
+    }
+
+
+def _unavailable(years: list[str]) -> tuple[str, str, list[Citation], str, Optional[str]]:
+    periods = ", ".join(f"FY{year}" for year in years)
+    return (
+        f"The requested period ({periods}) is unavailable in the retrieved filings, so I cannot answer for it.",
+        "refuse",
+        [],
+        "low",
+        f"No filing evidence for {periods} was retrieved.",
+    )
 
 
 def _observations(evidence: list[dict]) -> list[dict]:
@@ -461,7 +548,7 @@ def _target_year(plan: Plan) -> str:
         match = re.search(r"20[0-9]{2}", period)
         if match:
             return match.group(0)
-    return "2024"
+    return DEFAULT_LATEST_YEAR
 
 
 def _growth_years(plan: Plan) -> tuple[str, str]:
